@@ -1,0 +1,3 @@
+# Verilog list for Yosys (paths relative to repo root)
+rtl/gowin/rpll.v
+hw/rpll_blinky_example/top.v
