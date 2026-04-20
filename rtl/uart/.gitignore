@@ -2,3 +2,8 @@ uart_tx/*
 uart_tx_cover/*
 uart_tx_prove/*
 uart_tx_bmc/*
+
+uart_rx/*
+uart_rx_cover/*
+uart_rx_prove/*
+uart_rx_bmc/*
