@@ -1,0 +1,19 @@
+[tasks]
+prove
+cover
+
+[options]
+prove: mode prove
+cover: mode cover
+depth 40
+multiclock on
+
+[engines]
+smtbmc yices
+
+[script]
+read -formal async_fifo.v
+prep -top async_fifo
+
+[files]
+async_fifo.v
