@@ -1,8 +1,8 @@
 `default_nettype none `timescale 1 ns / 1 ps
 
 module uart_rx #(
-  parameter integer CLK_FREQ = 50_000_000,
-  parameter integer BAUD_RATE = 115_200
+  parameter [31:0] CLK_FREQ = 50_000_000,
+  parameter [31:0] BAUD_RATE = 115_200
 ) (
   input wire       clk,
   input wire       reset,
@@ -12,8 +12,6 @@ module uart_rx #(
   output reg rx_busy,
   output reg rx_err // High if stop bit is invalid
 );
-
-  localparam integer TickCount = CLK_FREQ / (BAUD_RATE * 16);
 
   // Synchronizer & glitch filter (majority voting)
   reg [1:0]          rxd_sync;
@@ -97,7 +95,7 @@ module uart_rx #(
         end else begin
           rx_busy <= 1'b0;
         end
-      end else begin // if (state == IDLE)
+      end else begin
         if (!tick_16x) begin
           rx_ready <= 1'b0;
         end else begin
