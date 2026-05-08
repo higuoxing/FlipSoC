@@ -14,7 +14,7 @@ prove: mode prove
 smtbmc
 
 [script]
-read_verilog -sv -DFORMAL uart_tx.v
+read_verilog -sv -DFORMAL uart_tx.sv
 # Inverting the logic: Set a tiny frequency so 1 bit = 4 clock cycles
 # Formula: CLK_FREQ / BAUD_RATE = ClocksPerBit
 # 40 / 10 = 4 cycles per bit
@@ -22,4 +22,4 @@ chparam -set CLK_FREQ 40 -set BAUD_RATE 10 uart_tx
 prep -top uart_tx
 
 [files]
-uart_tx.v
+uart_tx.sv

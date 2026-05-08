@@ -40,7 +40,7 @@ bitstream: $(BITSTREAM)
 
 $(BITSTREAM): $(SOURCES) $(CST)
 	@mkdir -p $(BUILD_DIR)
-	$(YOSYS) -p "read_verilog -I $(REPO_ROOT) $(SOURCES); synth_gowin -top top -json $(JSON_SYNTH)"
+	$(YOSYS) -p "read_verilog -sv -I $(REPO_ROOT) $(SOURCES); synth_gowin -top top -json $(JSON_SYNTH)"
 	$(NEXTPNR) --device $(DEVICE) --vopt family=$(FAMILY) --vopt cst=$(CST) \
 		--json $(JSON_SYNTH) --write $(JSON_PNR)
 	$(GOWIN_PACK) --device $(GOWIN_PACK_DEVICE) -o $(BITSTREAM) $(JSON_PNR)

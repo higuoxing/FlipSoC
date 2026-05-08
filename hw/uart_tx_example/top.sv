@@ -5,18 +5,20 @@
 // Top names must match .cst: clk, reset, uart_txd
 // Submodule uart_tx latches tx_data when tx_start is high in IDLE — load in LOAD, pulse in START.
 module top (
-  input  wire clk,
-  input  wire s1,
-  output wire uart_txd
+   input logic  clk,
+   input logic  s1,
+   output logic uart_txd
 );
 
-  wire reset = s1;
+  logic reset;
+
+  assign reset = s1;
 
   localparam integer ClkFreq = 27_000_000;
   localparam integer BaudRate = 115_200;
 
   localparam integer BytesCount = 8;
-  localparam reg [BytesCount*8-1:0] Msg = {
+  localparam [BytesCount*8-1:0] Msg = {
     8'h46,
     8'h6c,
     8'h69,
@@ -27,18 +29,20 @@ module top (
     8'h0a
   };
 
-  localparam reg [1:0]              INIT = 2'b00,
-                                    LOAD = 2'b01,
-                                    START = 2'b10,
-                                    WAIT = 2'b11;
+  typedef enum logic [1:0] {
+    INIT = 2'b00,
+    LOAD = 2'b01,
+    START = 2'b10,
+    WAIT = 2'b11
+  } state_t;
 
-  reg [1:0]                         state;
-  reg [3:0]                         byte_index;
-  reg [7:0]                         tx_data;
-  reg                               tx_start;
-  reg [31:0]                        gap_counter;
-  wire                              tx_busy;
-  wire                              tx_done;
+  state_t                         state;
+  logic [3:0]                         byte_index;
+  logic [7:0]                         tx_data;
+  logic                               tx_start;
+  logic [31:0]                        gap_counter;
+  logic                               tx_busy;
+  logic                               tx_done;
 
   uart_tx #(
     .CLK_FREQ (ClkFreq),
@@ -55,9 +59,9 @@ module top (
 
   localparam integer GapClocks = ClkFreq / 2;
 
-  reg                sending_line;
+  logic              sending_line;
 
-  always @(posedge clk) begin
+  always_ff @(posedge clk) begin
     if (reset) begin
       state        <= INIT;
       byte_index   <= 4'd0;

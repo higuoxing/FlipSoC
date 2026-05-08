@@ -2,38 +2,42 @@
 `timescale 1 ns / 1 ps
 
 module top (
-   input wire  clk,   // 27 MHz
-   input wire  s1, // Active high reset
-   input wire  uart_rxd,
-   output wire uart_txd
+   input logic  clk,   // 27 MHz
+   input logic  s1, // Active high reset
+   input logic  uart_rxd,
+   output logic uart_txd
 );
 
-  localparam integer CLK_FREQ  = 27_000_000;
-  localparam integer BAUD_RATE = 115_200;
-  localparam integer BUF_SIZE  = 256;
+  localparam [31:0] CLK_FREQ  = 27_000_000;
+  localparam [31:0] BAUD_RATE = 115_200;
+  localparam [31:0] BUF_SIZE  = 256;
 
-  wire               reset = s1;
+  logic             reset;
+
+  assign reset = s1;
 
   // UART Interconnects
-  wire [7:0]         rx_data;
-  wire               rx_ready, rx_busy, rx_err;
-  reg [7:0]          tx_data;
-  reg                tx_start;
-  wire               tx_busy, tx_done;
+  logic [7:0]         rx_data;
+  logic               rx_ready, rx_busy, rx_err;
+  logic [7:0]          tx_data;
+  logic                tx_start;
+  logic               tx_busy, tx_done;
 
   // Buffer and Pointers
-  reg [7:0]          buffer [0: BUF_SIZE-1];
-  reg [7:0]          wr_ptr;   // Index for receiving bytes
-  reg [7:0]          rd_ptr;   // Index for transmitting bytes
-  reg [7:0]          line_len; // Stores length of line to echo
+  logic [7:0]          buffer [0: BUF_SIZE-1];
+  logic [7:0]          wr_ptr;   // Index for receiving bytes
+  logic [7:0]          rd_ptr;   // Index for transmitting bytes
+  logic [7:0]          line_len; // Stores length of line to echo
 
   // FSM States
-  localparam reg [1:0] StateRx      = 2'b00,
-                       StateTxInit = 2'b01,
-                       StateTxWait = 2'b10;
-  reg [1:0]            state;
+  typedef enum logic [1:0]  {
+    StateRx = 2'b00,
+    StateTxInit = 2'b01,
+    StateTxWait = 2'b10
+  } state_t;
+  state_t            state;
 
-  always @(posedge clk) begin
+  always_ff @(posedge clk) begin
     if (reset) begin
       state    <= StateRx;
       wr_ptr   <= 0;

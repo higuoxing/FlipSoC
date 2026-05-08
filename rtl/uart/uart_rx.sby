@@ -15,7 +15,7 @@ prove: depth 100
 smtbmc
 
 [script]
-read_verilog -sv -DFORMAL uart_rx.v
+read_verilog -sv -DFORMAL uart_rx.sv
 # We want 1 tick per clock cycle to move as fast as possible.
 # INC = BAUD_RATE * 16. If we set BAUD_RATE=10 and CLK_FREQ=160, 
 # then INC=160. Every clock cycle generates a tick_16x.
@@ -23,4 +23,4 @@ chparam -set CLK_FREQ 160 -set BAUD_RATE 10 uart_rx
 prep -top uart_rx
 
 [files]
-uart_rx.v
+uart_rx.sv

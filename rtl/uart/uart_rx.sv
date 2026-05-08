@@ -4,23 +4,23 @@ module uart_rx #(
   parameter [31:0] CLK_FREQ = 50_000_000,
   parameter [31:0] BAUD_RATE = 115_200
 ) (
-  input wire       clk,
-  input wire       reset,
-  input wire       uart_rxd,
-  output reg [7:0] rx_data,
-  output reg rx_ready,
-  output reg rx_busy,
-  output reg rx_err // High if stop bit is invalid
+  input logic        clk,
+  input logic        reset,
+  input logic        uart_rxd,
+  output logic [7:0] rx_data,
+  output logic rx_ready,
+  output logic rx_busy,
+  output logic rx_err // High if stop bit is invalid
 );
 
   // Synchronizer & glitch filter (majority voting)
-  reg [1:0]          rxd_sync;
-  reg [2:0]          filter_reg;
-  reg                rxd_voted;
-  wire               rxd_stable;
+  logic [1:0]          rxd_sync;
+  logic [2:0]          filter_reg;
+  logic                rxd_voted;
+  logic                rxd_stable;
 
   assign rxd_stable = rxd_voted;
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (reset) begin
       rxd_sync <= 2'b11;
       filter_reg <= 3'b111;
@@ -38,13 +38,13 @@ module uart_rx #(
   end
 
   // Precise fractional baud generator
-  reg [31:0] baud_acc;
-  reg        tick_16x;
-  reg        sync_reset_tick;
+  logic [31:0] baud_acc;
+  logic        tick_16x;
+  logic        sync_reset_tick;
 
-  localparam reg [31:0] INC = BAUD_RATE * 16;
+  localparam [31:0] INC = BAUD_RATE * 16;
 
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (reset || sync_reset_tick) begin
       baud_acc <= 32'd0;
       tick_16x <= 1'b0;
@@ -58,16 +58,14 @@ module uart_rx #(
     end
   end
 
-  // FSM
-  reg [1:0] state;
-  localparam reg [1:0] IDLE = 2'b00,
-                       START = 2'b01,
-                       DATA = 2'b10,
-                       STOP = 2'b11;
+  typedef enum logic [1:0] {
+    IDLE, START, DATA, STOP
+  } state_t;
 
-  reg [3:0]            s_count; // Counts 0-15 (oversamples)
-  reg [2:0]            b_count; // Counts 0-7 (data bits)
-  reg [7:0]            shift_reg;
+  state_t state;
+  logic [3:0]            s_count; // Counts 0-15 (oversamples)
+  logic [2:0]            b_count; // Counts 0-7 (data bits)
+  logic [7:0]            shift_reg;
 
   always @ (posedge clk) begin
     if (reset) begin
@@ -100,6 +98,10 @@ module uart_rx #(
           rx_ready <= 1'b0;
         end else begin
           case (state)
+            IDLE: begin
+              // IDLE state has already been handled.
+            end
+
             START: begin
               if (s_count == 7) begin // Center of start bit
                 if (rxd_stable == 1'b0) begin
@@ -159,18 +161,18 @@ module uart_rx #(
 
 `ifdef FORMAL
   // Helper to ensure we don't check past values on the first clock cycle
-  reg f_past_valid;
+  logic f_past_valid;
   initial f_past_valid = 0;
-  always @ (posedge clk) f_past_valid <= 1;
+  always_ff @ (posedge clk) f_past_valid <= 1;
 
   // Ensure the solver starts in a reset state
-  always @ (*) begin
+  always_comb begin
     if (!f_past_valid)
       assume(reset);
   end
 
   // Check the initial state after the first clock edge (which processed the reset)
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (f_past_valid && $past(reset)) begin
       assert(state == IDLE);
       assert(!rx_ready);
@@ -179,7 +181,7 @@ module uart_rx #(
   end
 
   // FSM Safety Properties
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (f_past_valid && !reset) begin
       // If rx_ready was high, it MUST be low the next cycle (Single-cycle strobe)
       if ($past(rx_ready))
@@ -197,7 +199,7 @@ module uart_rx #(
 
   // Baud Counter Invariants
   // These help the tool "Induce" that the counter is working correctly
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (state != IDLE) begin
       // The 16x ticks should only happen at predictable intervals
       // Formal will try to "break" the math; these keep it honest
@@ -207,7 +209,7 @@ module uart_rx #(
 
   // Start Bit Validation
   // Proves that if we detect a "False Start", we return to IDLE
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (f_past_valid && $past(state == START && s_count == 7 && tick_16x)) begin
       if ($past(rxd_voted == 1'b1)) // Line went high (noise/false start)
         assert(state == IDLE);
@@ -217,13 +219,13 @@ module uart_rx #(
   // Liveness (Cover)
   // This proves that a successful reception is MATHEMATICALLY POSSIBLE.
   // If the tool says "Unreachable," your FSM logic is disconnected.
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     cover(rx_ready == 1'b1);
     cover(rx_err == 1'b1); // Can we actually reach an error state?
   end
 
   // State Constraints
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (f_past_valid) begin
       if (state == DATA) assert(b_count <= 7);
       if (state != IDLE) assert(rx_busy);
@@ -231,7 +233,7 @@ module uart_rx #(
   end
 
   // Logic to capture the bits as the solver manipulates uart_rxd
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (f_past_valid && !reset && !$past(reset)) begin
       if ($past(state == DATA && tick_16x && s_count == 15)) begin
         assert(shift_reg[$past(b_count)] == $past(rxd_stable));

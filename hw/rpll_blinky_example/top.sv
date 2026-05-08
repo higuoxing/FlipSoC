@@ -2,14 +2,16 @@
 `timescale 1 ns / 1 ps
 
 module top (
-   input wire        clk,
-   input wire        s1,
-   output wire [5:0] led
+   input logic        clk,
+   input logic        s1,
+   output logic [5:0] led
 );
 
-  wire clk_sys;
-  wire pll_lock;
-  wire reset = s1;
+  logic clk_sys;
+  logic pll_lock;
+  logic reset;
+
+  assign reset = s1;
 
   // Frequency Calculation:
   // input params are calculated as described in GOWIN doc (UG286-1.7E_Gowin Clock User Guide)
@@ -41,11 +43,11 @@ module top (
     .clkoutd3()
   );
 
-  reg [15:0] lock_timer;
-  reg        pll_stable;
+  logic [15:0] lock_timer;
+  logic        pll_stable;
 
   // Monitor pll_lock for at least 2ms.
-  always @ (posedge clk) begin
+  always_ff @ (posedge clk) begin
     if (!pll_lock || reset) begin
       lock_timer <= 16'd0;
       pll_stable <= 1'b0;
@@ -59,12 +61,12 @@ module top (
     end
   end
 
-  wire sys_reset = reset || !pll_stable;
+  logic sys_reset = reset || !pll_stable;
 
-  reg [26:0] counter;
-  reg        led_state;
+  logic [26:0] counter;
+  logic        led_state;
 
-  always @(posedge clk_sys) begin
+  always_ff @(posedge clk_sys) begin
     if (sys_reset) begin
       counter   <= 27'd0;
       led_state <= 1'b0;
